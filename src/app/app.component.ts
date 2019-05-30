@@ -55,10 +55,10 @@ export class AppComponent implements OnInit, AfterViewInit {
                 this.shoot();
                 break;
             case 'KeyA':
-                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, 0.02));
+                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, 0.01));
                 break;
             case 'KeyD':
-                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, -0.02));
+                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, -0.01));
                 break;
             case 'ArrowRight':
                 requestAnimationFrame(() => this.animateTurretTurn(this.playerShip.getObjectByName('turret'), -0.05));
@@ -70,19 +70,20 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     ngOnInit(): void {
+        this.createPlayerShip();
         this.camera = new THREE.PerspectiveCamera(
-            75,
+            65,
             window.innerWidth / window.innerHeight,
             0.1,
-            1000
+            2000
         );
-        this.camera.position.set(0, 40, 50);
-        this.camera.lookAt(this.scene.position);
-
+        const playerShipPos = this.playerShip.position;
+        this.camera.position.set(playerShipPos.x - 20, playerShipPos.y + 12, playerShipPos.z);
+        this.camera.lookAt(this.playerShip.position);
+        this.playerShip.add(this.camera);
         this.scene.add(new THREE.AxesHelper(10));
 
         this.createEnvironment();
-        this.createPlayerShip();
     }
 
     ngAfterViewInit(): void {
@@ -100,7 +101,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     moveCamera(offsetX: number, offsetY: number) {
         this.camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), offsetX / 100);
         this.camera.position.y -= offsetY;
-        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+        this.camera.lookAt(this.playerShip.position);
         this.render();
     }
 
@@ -124,7 +125,6 @@ export class AppComponent implements OnInit, AfterViewInit {
             new THREE.BoxGeometry(10, 10, 10),
             new THREE.MeshPhongMaterial({color: 'yellow'})
         );
-        box.name = 'sumbox';
         box.position.set(100, 0, 0);
         this.objects.push(box);
         this.scene.add(box);
@@ -160,6 +160,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     animateShipTurn(ship: THREE.Object3D, angle: number) {
         // TODO: Rotate turret with ship
         ship.rotateY(angle);
+        ship.getObjectByName('turret').setRotationFromMatrix(ship.matrixWorld);
         this.render();
     }
 
