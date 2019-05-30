@@ -19,9 +19,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     private x: number;
     private y: number;
 
-    private blueUnits = [];
-    private redUnits = [];
-    private isRunning = false;
+    private playerShip: THREE.Mesh;
 
     @HostListener('document:mousedown', ['$event'])
     onmousedown(evt: MouseEvent) {
@@ -46,13 +44,42 @@ export class AppComponent implements OnInit, AfterViewInit {
         }
     }
 
+    @HostListener('window:keydown', ['$event'])
+    onkeydown(evt: KeyboardEvent) {
+        console.log('Key pressed: ' + evt.code);
+        switch (evt.code) {
+            case 'Space':
+                this.shoot();
+                break;
+            case 'KeyA':
+                this.animateTurn(this.playerShip, 0.02);
+                break;
+            case 'KeyD':
+                this.animateTurn(this.playerShip, -0.02);
+                break;
+            case 'ArrowRight':
+                this.animateTurn(this.playerShip.getObjectByName('turret'), -0.05);
+                break;
+            case 'ArrowLeft':
+                this.animateTurn(this.playerShip.getObjectByName('turret'), 0.05);
+                break;
+        }
+    }
+
     ngOnInit(): void {
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 15, 30);
+        this.camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        this.camera.position.set(0, 40, 50);
         this.camera.lookAt(this.scene.position);
+
         this.scene.add(new THREE.AxesHelper(10));
-        this.scene.background = new THREE.Color('lightblue');
+
         this.createEnvironment();
+        this.createPlayerShip();
     }
 
     ngAfterViewInit(): void {
@@ -74,43 +101,15 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.render();
     }
 
-    onStart() {
-        const unit1 = this.createUnit('red');
-        unit1.position.set(-15, 0, 0);
-        this.blueUnits.push(unit1);
-
-        const unit2 = this.createUnit('blue');
-        unit2.position.set(15, 0, 0);
-        this.redUnits.push(unit2);
-
-        this.isRunning = true;
-        this.blueUnits.forEach(unit => this.animate(unit, .1));
-        this.redUnits.forEach(unit => this.animate(unit, -.1));
-    }
-
-    onReset() {
-        this.isRunning = false;
-        this.blueUnits.forEach(unit => this.scene.remove(unit));
-        this.redUnits.forEach(unit => this.scene.remove(unit));
-        this.blueUnits = [];
-        this.redUnits = [];
-    }
-
     createEnvironment() {
+        this.scene.background = new THREE.Color('white');
+
         const ground = new THREE.Mesh(
-            new THREE.BoxGeometry(60, 40, 1),
-            new THREE.MeshPhongMaterial({color: 'lightgreen'})
+            new THREE.BoxGeometry(100, 60, 1),
+            new THREE.MeshPhongMaterial({color: 'skyblue'})
         );
         ground.position.set(0, -1.5, 0);
         ground.rotateX(-Math.PI / 2);
-
-        /*
-        const light = new THREE.SpotLight();
-        light.intensity = 1;
-        light.position.set(0, 100, 0);
-        light.shadow.mapSize.width = light.shadow.mapSize.height = 10000;
-        light.castShadow = true;
-       */
 
         const light = new THREE.DirectionalLight(0xffffff, 0.8);
         light.target = ground;
@@ -119,28 +118,39 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.scene.add(ground, light);
     }
 
-    createUnit(color: string) {
-        const unit = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 2),
-            new THREE.MeshPhongMaterial({color})
+    createPlayerShip() {
+        this.playerShip = new THREE.Mesh(
+            new THREE.BoxGeometry(5, 5, 5),
+            new THREE.MeshPhongMaterial({color: 'whitesmoke'})
         );
-        unit.castShadow = true;
-        this.scene.add(unit);
-        return unit;
+        const turret = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshPhongMaterial({color: 'blue'})
+        );
+        turret.position.set(0, 3, 0);
+        turret.name = 'turret';
+        // turret.raycast(new THREE.Raycaster(), []);
+        this.playerShip.add(turret);
+        this.scene.add(this.playerShip);
+        this.animate(this.playerShip, 0.1);
     }
-
-    /*
-    animate() {
-        this.render();
-        requestAnimationFrame(() => this.animate());
-    }*/
 
     animate(obj: THREE.Object3D, distance: number) {
         obj.translateX(distance);
         this.render();
-        if (this.isRunning) {
-            requestAnimationFrame(() => this.animate(obj, distance));
-        }
+        requestAnimationFrame(() => this.animate(obj, distance));
+    }
+
+    animateTurn(obj: THREE.Object3D, angle: number) {
+        obj.rotateY(angle);
+        // obj.translateZ(distance);
+        this.render();
+    }
+
+    animateProjectile(obj: THREE.Object3D, distance: number) {
+        obj.translateZ(distance);
+        this.render();
+        requestAnimationFrame(() => this.animateProjectile(obj, distance));
     }
 
     /*
@@ -150,5 +160,19 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.animate();
     }
     */
+
+    shoot() {
+        const projectile = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshPhongMaterial()
+        );
+        const shipPos = this.playerShip.position;
+        const turret = this.playerShip.getObjectByName('turret');
+        projectile.setRotationFromEuler(turret.rotation);
+        projectile.position.set(shipPos.x, shipPos.y + 2, shipPos.z);
+        this.scene.add(projectile);
+
+        this.animateProjectile(projectile, 1);
+    }
 
 }
