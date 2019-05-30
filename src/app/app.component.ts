@@ -20,6 +20,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     private y: number;
 
     private playerShip: THREE.Mesh;
+    private objects = [];
+
+    private rayCaster = new THREE.Raycaster(undefined, undefined, 0, 1);
 
     @HostListener('document:mousedown', ['$event'])
     onmousedown(evt: MouseEvent) {
@@ -52,16 +55,16 @@ export class AppComponent implements OnInit, AfterViewInit {
                 this.shoot();
                 break;
             case 'KeyA':
-                this.animateTurn(this.playerShip, 0.02);
+                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, 0.02));
                 break;
             case 'KeyD':
-                this.animateTurn(this.playerShip, -0.02);
+                requestAnimationFrame(() => this.animateShipTurn(this.playerShip, -0.02));
                 break;
             case 'ArrowRight':
-                this.animateTurn(this.playerShip.getObjectByName('turret'), -0.05);
+                requestAnimationFrame(() => this.animateTurretTurn(this.playerShip.getObjectByName('turret'), -0.05));
                 break;
             case 'ArrowLeft':
-                this.animateTurn(this.playerShip.getObjectByName('turret'), 0.05);
+                requestAnimationFrame(() => this.animateTurretTurn(this.playerShip.getObjectByName('turret'), 0.05));
                 break;
         }
     }
@@ -116,6 +119,15 @@ export class AppComponent implements OnInit, AfterViewInit {
         light.castShadow = true;
         light.shadow.mapSize.width = light.shadow.mapSize.height = 1024;
         this.scene.add(ground, light);
+
+        const box = new THREE.Mesh(
+            new THREE.BoxGeometry(10, 10, 10),
+            new THREE.MeshPhongMaterial({color: 'yellow'})
+        );
+        box.name = 'sumbox';
+        box.position.set(100, 0, 0);
+        this.objects.push(box);
+        this.scene.add(box);
     }
 
     createPlayerShip() {
@@ -129,37 +141,38 @@ export class AppComponent implements OnInit, AfterViewInit {
         );
         turret.position.set(0, 3, 0);
         turret.name = 'turret';
-        // turret.raycast(new THREE.Raycaster(), []);
         this.playerShip.add(turret);
         this.scene.add(this.playerShip);
-        this.animate(this.playerShip, 0.1);
+        requestAnimationFrame(() => this.animateMovement(this.playerShip, 0.1));
     }
 
-    animate(obj: THREE.Object3D, distance: number) {
+    animateMovement(obj: THREE.Object3D, distance: number) {
         obj.translateX(distance);
         this.render();
-        requestAnimationFrame(() => this.animate(obj, distance));
+        requestAnimationFrame(() => this.animateMovement(obj, distance));
     }
 
-    animateTurn(obj: THREE.Object3D, angle: number) {
-        obj.rotateY(angle);
-        // obj.translateZ(distance);
+    animateTurretTurn(turret: THREE.Object3D, angle: number) {
+        turret.rotateY(angle);
         this.render();
     }
 
-    animateProjectile(obj: THREE.Object3D, distance: number) {
-        obj.translateZ(distance);
+    animateShipTurn(ship: THREE.Object3D, angle: number) {
+        // TODO: Rotate turret with ship
+        ship.rotateY(angle);
         this.render();
-        requestAnimationFrame(() => this.animateProjectile(obj, distance));
     }
 
-    /*
-    private activateDragging() {
-      const dragControls = new DragControls(this.scene, this.camera, this.renderer.domElement);
-      dragControls.
-      this.animate();
+    animateProjectile(projectile: THREE.Object3D, distance: number) {
+        this.rayCaster.set(projectile.position, projectile.getWorldDirection(new THREE.Vector3()));
+        const intersects = this.rayCaster.intersectObjects(this.objects);
+        if (intersects.length > 0) {
+            console.log(intersects[0].distance);
+        }
+        projectile.translateZ(distance);
+        this.render();
+        requestAnimationFrame(() => this.animateProjectile(projectile, distance));
     }
-    */
 
     shoot() {
         const projectile = new THREE.Mesh(
@@ -171,8 +184,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         projectile.setRotationFromEuler(turret.rotation);
         projectile.position.set(shipPos.x, shipPos.y + 2, shipPos.z);
         this.scene.add(projectile);
-
-        this.animateProjectile(projectile, 1);
+        requestAnimationFrame(() => this.animateProjectile(projectile, 1));
     }
 
 }
