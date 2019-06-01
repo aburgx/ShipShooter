@@ -49,7 +49,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     @HostListener('window:keydown', ['$event'])
     onkeydown(evt: KeyboardEvent) {
-        console.log('Key pressed: ' + evt.code);
+        console.log(`Key pressed: ${evt.code}`);
         switch (evt.code) {
             case 'Space':
                 this.shoot();
@@ -121,10 +121,11 @@ export class AppComponent implements OnInit, AfterViewInit {
 
         // create hit-able objects
         const box = new THREE.Mesh(
-            new THREE.BoxGeometry(10, 10, 10),
+            new THREE.BoxGeometry(10, 10, 20),
             new THREE.MeshPhongMaterial({color: 'yellow'})
         );
         box.position.set(100, 5, 0);
+        box.name = 'enemy1';
         this.objects.push(box);
         this.scene.add(box);
 
@@ -168,9 +169,10 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     animateProjectile(projectile: THREE.Object3D, x: number) {
-        const directionVector = new THREE.Vector3();
-        directionVector.subVectors(projectile.position, this.objects[0].position);
-        if (directionVector.length() > 10) {
+        const hitObject = this.detectHit(projectile);
+        if (hitObject !== null) {
+            console.log(`Hit: ${hitObject.name}`);
+        } else {
             projectile.translateX(1);
             const y = this.calcY(x);
             if (y > 0) {
@@ -178,9 +180,35 @@ export class AppComponent implements OnInit, AfterViewInit {
                 this.render();
                 requestAnimationFrame(() => this.animateProjectile(projectile, ++x));
             }
-        } else {
-            console.log('hit');
         }
+    }
+
+    detectHit(projectile: THREE.Object3D): THREE.Object3D {
+        for (const object of this.objects) {
+            const origin = new THREE.Vector3().copy(projectile.position);
+            // this.drawLine(origin, object.position); // draw direction vector
+            const directionVector = new THREE.Vector3().subVectors(object.position, origin);
+
+            this.rayCaster.set(origin, directionVector.normalize());
+            const intersections = this.rayCaster.intersectObjects(this.objects);
+
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                return intersection.object;
+            }
+        }
+        return null;
+    }
+
+    drawLine(veci1, veci2) {
+        const geom = new THREE.Geometry();
+        geom.vertices.push(veci1);
+        geom.vertices.push(veci2);
+        const line = new THREE.Line(
+            geom,
+            new THREE.LineBasicMaterial({color: 'black'})
+        );
+        this.scene.add(line);
     }
 
     calcY(x: number): number {
