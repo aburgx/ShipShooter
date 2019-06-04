@@ -1,7 +1,6 @@
 import {AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import * as THREE from 'three';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
-import {ColorKeywords} from 'three-full/sources/math/Euler';
 
 @Component({
     selector: 'app-root',
@@ -21,10 +20,13 @@ export class AppComponent implements OnInit, AfterViewInit {
     private x: number;
     private y: number;
 
-    private playerShip: THREE.Mesh;
+    private playerShip: THREE.Group;
+    private turret1: THREE.Group;
+    private barrels1 = [];
+
     private objects = [];
 
-    private rayCaster = new THREE.Raycaster(undefined, undefined, 0, 1);
+    private rayCaster = new THREE.Raycaster(undefined, undefined, 0, 3);
 
     @HostListener('document:mousedown', ['$event'])
     onmousedown(evt: MouseEvent) {
@@ -63,16 +65,16 @@ export class AppComponent implements OnInit, AfterViewInit {
                 requestAnimationFrame(() => this.animateShipTurn(this.playerShip, -0.01));
                 break;
             case 'ArrowDown':
-                requestAnimationFrame(() => this.animateTurretAngle(this.playerShip.getObjectByName('turret'), 0.02));
+                requestAnimationFrame(() => this.animateBarrels(this.barrels1, -0.02));
                 break;
             case 'ArrowUp':
-                requestAnimationFrame(() => this.animateTurretAngle(this.playerShip.getObjectByName('turret'), -0.02));
+                requestAnimationFrame(() => this.animateBarrels(this.barrels1, 0.02));
                 break;
             case 'ArrowRight':
-                requestAnimationFrame(() => this.animateTurretTurn(this.playerShip.getObjectByName('turret'), -0.05));
+                requestAnimationFrame(() => this.animateTurretTurn(this.turret1, -0.05));
                 break;
             case 'ArrowLeft':
-                requestAnimationFrame(() => this.animateTurretTurn(this.playerShip.getObjectByName('turret'), 0.05));
+                requestAnimationFrame(() => this.animateTurretTurn(this.turret1, 0.05));
                 break;
         }
     }
@@ -85,6 +87,7 @@ export class AppComponent implements OnInit, AfterViewInit {
             0.1,
             2000
         );
+        // this.renderer.setPixelRatio(window.devicePixelRatio);
         this.importShipModel();
     }
 
@@ -145,87 +148,56 @@ export class AppComponent implements OnInit, AfterViewInit {
             group => {
                 console.log(group.children);
 
-                const children = group.children;
-
-                // create playerShip
-                const base = children.find(child => {
-                    return child.name === 'base';
-                });
-                this.playerShip = base as THREE.Mesh;
-
-                let cabin: THREE.Mesh;
-                let turret1: THREE.Mesh;
-                let turret2: THREE.Mesh;
-                children.forEach(child => {
-                    switch (child.name) {
-                        case 'cabin':
-                            cabin = child as THREE.Mesh;
-                            this.playerShip.add(cabin);
-                            break;
-                        case 'turret1':
-                            turret1 = child as THREE.Mesh;
-                            turret1.material = new THREE.MeshPhongMaterial({color: 'blue'});
-                            this.playerShip.add(turret1);
-                            break;
-                        case 'turret2':
-                            turret2 = child as THREE.Mesh;
-                            turret2.material = new THREE.MeshPhongMaterial({color: 'blue'});
-                            this.playerShip.add(turret2);
-                            break;
-                    }
-                });
-
-                children.forEach(child => {
-                    if (child.name === 'barrel1.1' || child.name === 'barrel1.2' || child.name === 'barrel1.3') {
-                        turret1.add(child as THREE.Mesh);
-                    } else if (child.name === 'barrel2.1' || child.name === 'barrel2.2' || child.name === 'barrel2.3') {
-                        turret2.add(child as THREE.Mesh);
-                    }
-                });
-
+                // setup playerShip
+                this.playerShip = group;
                 this.playerShip.position.set(0, 2.5, 0);
                 this.playerShip.castShadow = true;
-
-                // setup turrets
-
-
-                /*
-                const turret = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 1, 1),
-                    new THREE.MeshPhongMaterial({color: 'blue'})
-                );
-                turret.position.set(0, 3, 0);
-                turret.name = 'turret';
-                this.playerShip.add(turret);
-                */
                 this.scene.add(this.playerShip);
 
+                // setup camera
                 const playerShipPos = this.playerShip.position;
                 this.camera.position.set(playerShipPos.x - 20, playerShipPos.y + 12, playerShipPos.z);
                 this.camera.lookAt(this.playerShip.position);
                 this.playerShip.add(this.camera);
 
-                this.loadMesh();
+                console.log(this.playerShip);
+
             }, evt => {
-                console.log(`Object: ${evt.loaded} / ${evt.total}`);
+                console.log(`Ship: ${evt.loaded} / ${evt.total}`);
             }, evt => {
                 console.error(evt);
             }
         );
-        /*
-        const materialLoader = new MTLLoader();
-        materialLoader.setPath('assets/');
-        materialLoader.load(
-            'ship.mtl',
-            material => {
-                material.preload();
 
+        objLoader.load(
+            'turret.obj',
+            group => {
+                this.turret1 = group;
+                this.turret1.position.set(6, 4.25, 0);
+
+                const turretMesh = this.turret1.getObjectByName('turret') as THREE.Mesh;
+                turretMesh.geometry.center();
+                turretMesh.material = new THREE.MeshPhongMaterial({color: 'darkgray'});
+
+                this.barrels1.push(
+                    this.turret1.getObjectByName('barrel1'),
+                    this.turret1.getObjectByName('barrel2'),
+                    this.turret1.getObjectByName('barrel3')
+                );
+                // position the barrels of the turret
+                this.barrels1.forEach((barrel: THREE.Mesh) => {
+                    barrel.position.set(1, 0, 0);
+                });
+
+                this.playerShip.add(this.turret1);
+                this.loadMesh();
             }, evt => {
-                console.log(`Material: ${evt.loaded} / ${evt.total}`);
+                console.log(`Turret: ${evt.loaded} / ${evt.total}`);
             }, evt => {
                 console.error(evt);
             }
-        );*/
+        );
+
     }
 
     moveCamera(offsetX: number, offsetY: number) {
@@ -242,19 +214,24 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     animateTurretTurn(turret: THREE.Object3D, angle: number) {
+        // turret.rotateOnAxis(new THREE.Vector3(0, 1, 0), angle);
         turret.rotateY(angle);
         this.render();
     }
 
-    animateTurretAngle(turret: THREE.Object3D, angle: number) {
+    animateBarrels(barrels, angle: number) {
         if (angle > 0) {
-            if (turret.rotation.z < 0.88) {
-                turret.rotateZ(angle);
+            if (barrels[0].rotation.z < 0.80) {
+                barrels.forEach(barrel => {
+                    barrel.rotateZ(angle);
+                });
                 this.render();
             }
         } else {
-            if (turret.rotation.z > 0.02) {
-                turret.rotateZ(angle);
+            if (barrels[0].rotation.z > 0.02) {
+                barrels.forEach(barrel => {
+                    barrel.rotateZ(angle);
+                });
                 this.render();
             }
         }
@@ -310,10 +287,10 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     calcY(x: number): number {
         const g = 9.81;
-        const y0 = 5;
+        const y0 = 7;
         const v0 = 50;
         // const alpha = 0.8;
-        const alpha = this.playerShip.getObjectByName('turret').rotation.z;
+        const alpha = this.barrels1[0].rotation.z;
         x = Math.abs(x);
         return y0 + Math.tan(alpha) * x
             - (g / (2 * Math.pow(v0, 2) * Math.pow(Math.cos(alpha), 2))) * Math.pow(x, 2);
@@ -324,12 +301,11 @@ export class AppComponent implements OnInit, AfterViewInit {
             new THREE.BoxGeometry(0.5, 0.5, 0.5),
             new THREE.MeshPhongMaterial({color: 'darkgray'})
         );
-        const turret = this.playerShip.getObjectByName('turret');
-        projectile.setRotationFromMatrix(turret.matrixWorld);
-        projectile.position.copy(this.playerShip.position);
-        projectile.position.setY(this.playerShip.position.y + 3);
+        projectile.setRotationFromMatrix(this.turret1.matrixWorld);
+        const turretPos = this.turret1.getWorldPosition(new THREE.Vector3());
+        projectile.position.set(turretPos.x, turretPos.y, turretPos.z);
         this.scene.add(projectile);
-        requestAnimationFrame(() => this.animateProjectile(projectile, 0));
+        requestAnimationFrame(() => this.animateProjectile(projectile, 5));
     }
 
 }
