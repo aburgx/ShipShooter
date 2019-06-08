@@ -146,11 +146,8 @@ export class AppComponent implements OnInit, AfterViewInit {
         objLoader.load(
             'ship.obj',
             group => {
-                console.log(group.children);
-
                 // setup playerShip
                 this.playerShip = group;
-                this.playerShip.position.set(0, 2.5, 0);
                 this.playerShip.castShadow = true;
                 this.scene.add(this.playerShip);
 
@@ -159,9 +156,6 @@ export class AppComponent implements OnInit, AfterViewInit {
                 this.camera.position.set(playerShipPos.x - 20, playerShipPos.y + 12, playerShipPos.z);
                 this.camera.lookAt(this.playerShip.position);
                 this.playerShip.add(this.camera);
-
-                console.log(this.playerShip);
-
             }, evt => {
                 console.log(`Ship: ${evt.loaded} / ${evt.total}`);
             }, evt => {
@@ -287,7 +281,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     calcY(x: number): number {
         const g = 9.81;
-        const y0 = 7;
+        const y0 = 5;
         const v0 = 50;
         // const alpha = 0.8;
         const alpha = this.barrels1[0].rotation.z;
