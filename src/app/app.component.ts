@@ -22,8 +22,11 @@ export class AppComponent implements OnInit, AfterViewInit {
     private y: number;
 
     private playerShip: Ship;
+    private enemyShips: Ship[] = [];
 
     private hitAbleObjects: THREE.Object3D[] = [];
+
+    private models = new Map();
 
     private rayCaster = new THREE.Raycaster(undefined, undefined, 0, 3);
 
@@ -106,48 +109,72 @@ export class AppComponent implements OnInit, AfterViewInit {
         const manager = new THREE.LoadingManager(
             () => {
                 console.log('%cLoading complete', 'color: green');
+
+                this.setupPlayer();
+                this.setupEnemies();
                 this.generateEnvironment();
+
+                // start playerShip movement animation
+                requestAnimationFrame(() => this.animateMovement(this.playerShip.model, 0.1));
             }, (url, loaded, total) => {
                 console.log(`Loading file: ${url} \nLoaded ${loaded} of ${total} files.`);
             }, (url) => {
                 console.error(`An error occurred while loading ${url}.`);
             }
         );
+
         const objLoader = new OBJLoader(manager);
         objLoader.setPath('assets/');
 
         objLoader.load(
             'ship.obj',
             shipModel => {
-                // setup playerShip
                 shipModel.castShadow = true;
-                this.scene.add(shipModel);
-
-                // initiate first person view
-                this.camera.position.set(shipModel.position.x - 20, shipModel.position.y + 12, shipModel.position.z);
-                this.camera.lookAt(shipModel.position);
-                shipModel.add(this.camera);
-
-                this.playerShip = new Ship(shipModel);
-
-                objLoader.load(
-                    'turret.obj',
-                    turretModel => {
-                        // setup turret mesh
-                        const turretBase = turretModel.getObjectByName('turret') as THREE.Mesh;
-                        turretBase.geometry.center();
-                        turretBase.material = new THREE.MeshPhongMaterial({color: 'darkgray'});
-                        turretModel.position.set(6, 4.25, 0);
-
-                        const turret = new Turret(turretModel);
-                        turret.barrels.forEach(barrel => barrel.position.set(1, 0, 0));
-                        this.playerShip.turrets.push(turret);
-                        this.playerShip.model.add(turret.model);
-                    }
-                );
+                this.models.set('ship', shipModel);
             }
         );
 
+        objLoader.load(
+            'turret.obj',
+            turretModel => {
+                turretModel.castShadow = true;
+                const turretBase = turretModel.getObjectByName('turret') as THREE.Mesh;
+                turretBase.geometry.center();
+                turretBase.material = new THREE.MeshPhongMaterial({color: 'darkgray'});
+                this.models.set('turret', turretModel);
+            }
+        );
+    }
+
+    setupPlayer() {
+        const playerShip = this.createShip();
+
+        // initiate first person view
+        const modelPos = playerShip.model.position;
+        this.camera.position.set(modelPos.x - 25, modelPos.y + 15, modelPos.z);
+        this.camera.lookAt(playerShip.model.position);
+        playerShip.model.add(this.camera);
+
+        this.playerShip = playerShip;
+    }
+
+    setupEnemies() {
+        const enemyShip1 = this.createShip();
+        enemyShip1.model.position.set(100, 0, 50);
+        enemyShip1.model.rotateY(THREE.Math.degToRad(180));
+        this.enemyShips.push(enemyShip1);
+    }
+
+    createShip(): Ship {
+        const ship = new Ship(this.models.get('ship').clone());
+        const turret = new Turret(this.models.get('turret').clone());
+        turret.model.position.set(6, 4.25, 0);
+        turret.barrels.forEach(barrel => barrel.position.set(1, 0, 0));
+        ship.turrets.push(turret);
+        ship.model.add(turret.model);
+        this.hitAbleObjects = this.hitAbleObjects.concat(ship.hitAbleParts);
+        this.scene.add(ship.model);
+        return ship;
     }
 
     generateEnvironment() {
@@ -155,7 +182,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.scene.add(new THREE.AxesHelper(10));
         this.scene.background = new THREE.Color('white');
         const ground = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry(500, 500),
+            new THREE.PlaneBufferGeometry(1000, 1000),
             new THREE.MeshPhongMaterial({color: 'skyblue'})
         );
         ground.position.set(0, 0, 0);
@@ -178,12 +205,9 @@ export class AppComponent implements OnInit, AfterViewInit {
             new THREE.MeshPhongMaterial({color: 'yellow'})
         );
         box.position.set(100, 5, 0);
-        box.name = 'enemy1';
+        box.name = 'box1';
         this.hitAbleObjects.push(box);
         this.scene.add(box);
-
-        // start playerShip movement animation
-        requestAnimationFrame(() => this.animateMovement(this.playerShip.model, 0.1));
     }
 
     moveCamera(offsetX: number, offsetY: number) {
@@ -231,7 +255,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     animateProjectile(projectile: THREE.Object3D, x: number) {
         const hitObject = this.detectHit(projectile);
         if (hitObject !== null) {
-            console.log(`Hit: ${hitObject.name}`);
+            console.log(`%cHit: ${hitObject.name}`, 'color: blue');
         } else {
             projectile.translateX(2);
             const y = this.calcY(x);

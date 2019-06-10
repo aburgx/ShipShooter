@@ -2,8 +2,10 @@ import * as THREE from 'three';
 
 export class Ship {
     public turrets: Turret[] = [];
+    public hitAbleParts: THREE.Object3D[] = [];
 
     constructor(public model: THREE.Group) {
+        this.hitAbleParts.push(model.getObjectByName('base'), model.getObjectByName('cabin'));
     }
 }
 
