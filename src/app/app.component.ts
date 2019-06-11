@@ -1,7 +1,8 @@
 import {AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import * as THREE from 'three';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
-import {Ship, Turret} from './entities/Ship';
+import {Ship} from './entities/Ship';
+import {Turret} from './entities/Turret';
 
 @Component({
     selector: 'app-root',
@@ -55,10 +56,15 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     @HostListener('window:keydown', ['$event'])
     onkeydown(evt: KeyboardEvent) {
-        console.log(`Key pressed: ${evt.code}`);
         switch (evt.code) {
             case 'Space':
                 this.shoot();
+                break;
+            case 'KeyW':
+                this.playerShip.changeSpeed(0.1);
+                break;
+            case 'KeyS':
+                this.playerShip.changeSpeed(-0.1);
                 break;
             case 'KeyA':
                 requestAnimationFrame(() => this.animateShipTurn(this.playerShip.model, 0.01));
@@ -113,9 +119,6 @@ export class AppComponent implements OnInit, AfterViewInit {
                 this.setupPlayer();
                 this.setupEnemies();
                 this.generateEnvironment();
-
-                // start playerShip movement animation
-                requestAnimationFrame(() => this.animateMovement(this.playerShip.model, 0.1));
             }, (url, loaded, total) => {
                 console.log(`Loading file: ${url} \nLoaded ${loaded} of ${total} files.`);
             }, (url) => {
@@ -156,6 +159,8 @@ export class AppComponent implements OnInit, AfterViewInit {
         playerShip.model.add(this.camera);
 
         this.playerShip = playerShip;
+        // start playerShip movement animation
+        requestAnimationFrame(() => this.animateMovement(playerShip));
     }
 
     setupEnemies() {
@@ -163,6 +168,9 @@ export class AppComponent implements OnInit, AfterViewInit {
         enemyShip1.model.position.set(100, 0, 50);
         enemyShip1.model.rotateY(THREE.Math.degToRad(180));
         this.enemyShips.push(enemyShip1);
+        // start playerShip movement animation
+        // requestAnimationFrame(() => this.animateMovement(enemyShip1));
+        requestAnimationFrame(() => this.animateEnemyMovement(enemyShip1, 0.1));
     }
 
     createShip(): Ship {
@@ -217,10 +225,16 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.render();
     }
 
-    animateMovement(ship: THREE.Object3D, distance: number) {
-        ship.translateX(distance);
+    animateMovement(ship: Ship) {
+        ship.model.translateX(ship.speed);
         this.render();
-        requestAnimationFrame(() => this.animateMovement(ship, distance));
+        requestAnimationFrame(() => this.animateMovement(ship));
+    }
+
+    animateEnemyMovement(ship: Ship, angle: number) {
+        ship.model.translateX(ship.speed);
+        ship.model.rotateY(angle);
+        requestAnimationFrame(() => this.animateEnemyMovement(ship, angle));
     }
 
     animateTurretTurn(turret: THREE.Object3D, angle: number) {

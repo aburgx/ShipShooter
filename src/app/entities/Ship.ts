@@ -1,22 +1,19 @@
 import * as THREE from 'three';
+import {Turret} from './Turret';
 
 export class Ship {
     public turrets: Turret[] = [];
     public hitAbleParts: THREE.Object3D[] = [];
+    public speed = 0.1;
 
     constructor(public model: THREE.Group) {
         this.hitAbleParts.push(model.getObjectByName('base'), model.getObjectByName('cabin'));
     }
-}
 
-export class Turret {
-    public barrels: THREE.Object3D[] = [];
-
-    constructor(public model: THREE.Group) {
-        this.barrels.push(
-            model.getObjectByName('barrel1'),
-            model.getObjectByName('barrel2'),
-            model.getObjectByName('barrel3'),
-        );
+    changeSpeed(amount: number) {
+        if ((amount > 0 && this.speed <= 0.3) || (amount < 0 && this.speed > 0.2)) {
+            this.speed += amount;
+        }
+        console.log(`Speed: ${this.speed}`);
     }
 }
