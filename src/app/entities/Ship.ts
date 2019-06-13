@@ -16,4 +16,21 @@ export class Ship {
         }
         console.log(`Speed: ${this.speed}`);
     }
+
+    shoot(): THREE.Mesh {
+        const turret = this.turrets[0];
+        if (turret.hasReloaded()) {
+            const projectile = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.5, 0.5),
+                new THREE.MeshPhongMaterial({color: 'darkgray'})
+            );
+            // set the position of the projectile from the turret
+            turret.lastTimeShot = new Date();
+            projectile.setRotationFromMatrix(turret.model.matrixWorld);
+            const turretPos = turret.model.getWorldPosition(new THREE.Vector3());
+            projectile.position.set(turretPos.x, turretPos.y - 1, turretPos.z);
+            return projectile;
+        }
+        return null;
+    }
 }
