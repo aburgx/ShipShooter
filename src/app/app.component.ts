@@ -66,10 +66,10 @@ export class AppComponent implements OnInit, AfterViewInit {
                 }
                 break;
             case 'KeyW':
-                this.player.changeSpeed(0.1);
+                this.player.changeSpeed(1);
                 break;
             case 'KeyS':
-                this.player.changeSpeed(-0.1);
+                this.player.changeSpeed(-1);
                 break;
             case 'KeyA':
                 requestAnimationFrame(() => this.animateShipTurn(this.player.model, 0.01));
@@ -175,9 +175,20 @@ export class AppComponent implements OnInit, AfterViewInit {
         const bot1 = new Bot(enemyShip1);
         this.bots.push(bot1);
 
-        // start enemy movement and AI
+        // start enemy movement and Bot interaction
         requestAnimationFrame(() => this.animateMovement(enemyShip1));
-        bot1.start(this.player);
+        bot1.interact(
+            this.player.model.position,
+            (projectile) => {
+                this.scene.add(projectile);
+                requestAnimationFrame(() => this.animateProjectile(projectile, 5));
+            }, (euler, diff) => {
+                // bot1.ship.model.setRotationFromEuler(euler);
+                // bot1.ship.model.rotateY(THREE.Math.degToRad(-90));
+                requestAnimationFrame(() => this.animateShipTurn(bot1.ship.model, diff));
+                console.log(diff);
+            }
+        );
     }
 
     createShip(): Ship {
@@ -238,7 +249,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     animateMovement(ship: Ship) {
-        ship.model.translateX(ship.speed);
+        ship.model.translateX(ship.speed / 10);
         this.render();
         requestAnimationFrame(() => this.animateMovement(ship));
     }

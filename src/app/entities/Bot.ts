@@ -5,39 +5,37 @@ export class Bot {
     constructor(public ship: Ship) {
     }
 
-    start(player: Ship) {
-        setInterval(() => this.interact(player), 1000);
-    }
-
-    interact(player: Ship) {
+    interact(playerPos: THREE.Vector3, onShoot, onRotate) {
         // get distance to player ship
         const botPos = this.ship.model.position;
-        const playerPos = player.model.position;
         const distance = botPos.distanceTo(playerPos);
 
-        if (distance < 50) {
-            this.ship.speed = 0.1;
-        }
-
-        const directionVector = new THREE.Vector3().subVectors(botPos, playerPos);
-        this.rotateTo(directionVector);
-
-        if (distance >= 100) {
-            this.ship.speed = 0.3;
-        } else if (distance >= 50) {
-            this.ship.speed = 0.2;
-
+        this.ship.turrets[0].model.lookAt(playerPos);
+        this.ship.turrets[0].model.rotateY(THREE.Math.degToRad(-90));
+        if (distance > 50) {
+            this.ship.changeSpeed(1);
+            // rotate towards player ship
+            const copy = this.ship.model.clone();
+            copy.lookAt(playerPos);
+            const diff = copy.rotation.y - this.ship.model.rotation.y;
+            onRotate(copy.rotation, Math.abs(diff));
+            // this.ship.model.lookAt(playerPos);
+            // this.ship.model.rotateY(THREE.Math.degToRad(-90));
         } else {
-            this.ship.speed = 0.1;
+            this.ship.changeSpeed(-1);
+            this.ship.turrets[0].model.lookAt(playerPos);
+            this.ship.turrets[0].model.rotateY(THREE.Math.degToRad(-90));
+            // shoot at the player ship
+            const projectile = this.ship.shoot();
+            if (projectile !== null) {
+                onShoot(projectile);
+            }
         }
+
+        if (distance > 80) {
+            this.ship.changeSpeed(0.1);
+        }
+        setTimeout(() => this.interact(playerPos, onShoot, onRotate), 1000);
     }
 
-    private rotateTo(directionVector: THREE.Vector3) {
-        const mx = new THREE.Matrix4().lookAt(
-            directionVector,
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 1, 0)
-        );
-        this.ship.model.setRotationFromMatrix(mx);
-    }
 }
