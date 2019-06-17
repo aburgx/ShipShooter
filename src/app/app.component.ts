@@ -12,7 +12,7 @@ import {Bot} from './entities/Bot';
 })
 export class AppComponent implements OnInit, AfterViewInit {
 
-    @ViewChild('canvas')
+    @ViewChild('canvas', {static: false})
     private canvas: ElementRef;
 
     private camera: THREE.Camera;
@@ -138,6 +138,9 @@ export class AppComponent implements OnInit, AfterViewInit {
             'ship.obj',
             shipModel => {
                 shipModel.castShadow = true;
+                shipModel.position.setY(3);
+                const base = shipModel.getObjectByName('cabin') as THREE.Mesh;
+                base.material = new THREE.MeshLambertMaterial({color: 'lightgrey'});
                 this.models.set('ship', shipModel);
             }
         );
@@ -157,7 +160,8 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     setupPlayer() {
         const playerShip = this.createShip();
-
+        const cabin = playerShip.model.getObjectByName('base') as THREE.Mesh;
+        cabin.material = new THREE.MeshLambertMaterial({color: 'blue'});
         // initiate first person view
         const modelPos = playerShip.model.position;
         this.camera.position.set(modelPos.x - 25, modelPos.y + 15, modelPos.z);
@@ -170,25 +174,40 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     setupEnemies() {
-        const enemyShip1 = this.createShip();
-        enemyShip1.model.position.set(100, 0, 50);
-        const bot1 = new Bot(enemyShip1);
-        this.bots.push(bot1);
+        for (let i = 0; i < 2; ++i) {
+            const enemyShip = this.createShip();
+            enemyShip.model.rotateY(THREE.Math.degToRad(180));
+            const cabin = enemyShip.model.getObjectByName('base') as THREE.Mesh;
+            cabin.material = new THREE.MeshLambertMaterial({color: 'red'});
+            const bot = new Bot(enemyShip);
+            requestAnimationFrame(() => this.animateMovement(enemyShip));
+            // start enemy movement and Bot interaction
+            bot.interact(
+                this.player.model.position,
+                (projectile) => {
+                    this.scene.add(projectile);
+                    requestAnimationFrame(() => this.animateProjectile(projectile, 5));
+                }, () => {
+                    // remove dead bot
+                    this.scene.remove(bot.ship.model);
+                    const index: number = this.bots.indexOf(bot);
+                    if (index !== -1) {
+                        this.bots.splice(index, 1);
+                    }
+                    this.render();
+                    if (this.bots.length === 0) {
+                        alert('Player has won!\nPress ok to restart...');
+                        location.reload();
+                    }
+                }
+            );
+            this.bots.push(bot);
+        }
 
-        // start enemy movement and Bot interaction
-        requestAnimationFrame(() => this.animateMovement(enemyShip1));
-        bot1.interact(
-            this.player.model.position,
-            (projectile) => {
-                this.scene.add(projectile);
-                requestAnimationFrame(() => this.animateProjectile(projectile, 5));
-            }, (euler, diff) => {
-                // bot1.ship.model.setRotationFromEuler(euler);
-                // bot1.ship.model.rotateY(THREE.Math.degToRad(-90));
-                requestAnimationFrame(() => this.animateShipTurn(bot1.ship.model, diff));
-                console.log(diff);
-            }
-        );
+        this.bots[0].ship.model.position.setX(200);
+        this.bots[0].ship.model.position.setZ(75);
+        this.bots[1].ship.model.position.setX(100);
+        this.bots[1].ship.model.position.setZ(-75);
     }
 
     createShip(): Ship {
@@ -197,7 +216,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         const turret = new Turret(this.models.get('turret').clone());
 
         // setup turret and barrels
-        turret.model.position.set(6, 4.25, 0);
+        turret.model.position.set(9, 0.25, 0);
         turret.barrels.forEach(barrel => barrel.position.set(1, 0, 0));
         ship.turrets.push(turret);
         ship.model.add(turret.model);
@@ -213,13 +232,13 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.scene.add(new THREE.AxesHelper(10));
         this.scene.background = new THREE.Color('white');
         const ground = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry(1000, 1000),
+            new THREE.PlaneBufferGeometry(2000, 2000),
             new THREE.MeshPhongMaterial({color: 'skyblue'})
         );
         ground.position.set(0, 0, 0);
         ground.rotateX(-Math.PI / 2);
         this.scene.add(ground);
-        this.scene.fog = new THREE.Fog(0xffffff, 1, 400);
+        this.scene.fog = new THREE.Fog(0xffffff, 1, 600);
 
         // create light
         const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1);
@@ -229,16 +248,6 @@ export class AppComponent implements OnInit, AfterViewInit {
 
         const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         this.scene.add(ambientLight);
-
-        // create hit-able objects
-        const box = new THREE.Mesh(
-            new THREE.BoxGeometry(10, 10, 20),
-            new THREE.MeshPhongMaterial({color: 'yellow'})
-        );
-        box.position.set(100, 5, 0);
-        box.name = 'box1';
-        this.hitAbleObjects.push(box);
-        this.scene.add(box);
     }
 
     moveCamera(offsetX: number, offsetY: number) {
@@ -288,6 +297,19 @@ export class AppComponent implements OnInit, AfterViewInit {
         const hitObject = this.detectHit(projectile);
         if (hitObject !== null) {
             console.log(`%cHit: ${hitObject.name}`, 'color: blue');
+            if (this.player.model.children.includes(hitObject)) {
+                this.player.health--;
+                if (this.player.health <= 0) {
+                    alert('Player has lost.\nPress ok to try again...');
+                    location.reload();
+                }
+            } else {
+                this.bots.forEach(bot => {
+                    if (bot.ship.model.children.includes(hitObject)) {
+                        bot.ship.health--;
+                    }
+                });
+            }
         } else {
             // no object has been hit, continue the animation
             projectile.translateX(2);

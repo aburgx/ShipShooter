@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export class Turret {
     public barrels: THREE.Object3D[] = [];
-    public lastTimeShot = new Date(0);
+    public lastTimeShot = new Date();
 
     constructor(public model: THREE.Group) {
         this.barrels.push(

@@ -1,1 +1,15 @@
+<mat-toolbar style="background-color: transparent;">
+    <div class="container">
+        <div class="container" style="margin-right: 50px">
+            <span style="margin-right: 5px; font-weight: bold">Player:</span>
+            <mat-icon style="color: blue">favorite</mat-icon>
+            <span style="margin-left: 5px; font-size: 0.9em">x{{player != null ? player.health : 3}}</span>
+        </div>
+        <div *ngFor="let bot of bots; let i = index" class="container" style="margin-right: 50px">
+            <span style="margin-right: 5px">Bot {{i + 1}}:</span>
+            <mat-icon style="color: red">favorite</mat-icon>
+            <span style="margin-left: 5px; font-size: 0.9em">x{{bot.ship.health >= 0 ? bot.ship.health : 0}}</span>
+        </div>
+    </div>
+</mat-toolbar>
 <div #canvas></div>

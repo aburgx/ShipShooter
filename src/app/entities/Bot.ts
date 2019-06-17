@@ -5,22 +5,23 @@ export class Bot {
     constructor(public ship: Ship) {
     }
 
-    interact(playerPos: THREE.Vector3, onShoot, onRotate) {
+    interact(playerPos: THREE.Vector3, onShoot, onDeath) {
         // get distance to player ship
         const botPos = this.ship.model.position;
         const distance = botPos.distanceTo(playerPos);
 
         this.ship.turrets[0].model.lookAt(playerPos);
         this.ship.turrets[0].model.rotateY(THREE.Math.degToRad(-90));
+
         if (distance > 50) {
             this.ship.changeSpeed(1);
-            // rotate towards player ship
-            const copy = this.ship.model.clone();
-            copy.lookAt(playerPos);
-            const diff = copy.rotation.y - this.ship.model.rotation.y;
-            onRotate(copy.rotation, Math.abs(diff));
-            // this.ship.model.lookAt(playerPos);
-            // this.ship.model.rotateY(THREE.Math.degToRad(-90));
+            const random = Math.random();
+            if (random >= 0.7) {
+                this.ship.model.lookAt(playerPos);
+                this.ship.model.rotateY(THREE.Math.degToRad(THREE.Math.randInt(-80, -100)));
+            } else if (random >= 0.4) {
+                this.ship.model.rotateY(THREE.Math.degToRad(THREE.Math.randInt(-40, 40)));
+            }
         } else {
             this.ship.changeSpeed(-1);
             this.ship.turrets[0].model.lookAt(playerPos);
@@ -35,7 +36,11 @@ export class Bot {
         if (distance > 80) {
             this.ship.changeSpeed(0.1);
         }
-        setTimeout(() => this.interact(playerPos, onShoot, onRotate), 1000);
+        if (this.ship.health > 0) {
+            setTimeout(() => this.interact(playerPos, onShoot, onDeath), 1000);
+        } else {
+            onDeath();
+        }
     }
 
 }

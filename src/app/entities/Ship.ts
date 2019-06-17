@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {Turret} from './Turret';
 
 export class Ship {
+    public health = 3;
     public turrets: Turret[] = [];
     public hitAbleParts: THREE.Object3D[] = [];
     public speed = 1;
@@ -14,7 +15,6 @@ export class Ship {
         if ((amount > 0 && this.speed !== 3) || (amount < 0 && this.speed !== 1)) {
             this.speed = Math.trunc(this.speed + amount);
         }
-        console.log(`Speed: ${this.speed}`);
     }
 
     shoot(): THREE.Mesh {
