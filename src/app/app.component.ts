@@ -1,9 +1,9 @@
-import {AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import * as THREE from 'three';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
 import {Ship} from './entities/Ship';
 import {Turret} from './entities/Turret';
 import {Bot} from './entities/Bot';
+import {AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 
 @Component({
     selector: 'app-root',
@@ -232,7 +232,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.scene.add(new THREE.AxesHelper(10));
         this.scene.background = new THREE.Color('white');
         const ground = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry(2000, 2000),
+            new THREE.PlaneBufferGeometry(10000, 10000),
             new THREE.MeshPhongMaterial({color: 'skyblue'})
         );
         ground.position.set(0, 0, 0);
@@ -317,7 +317,7 @@ export class AppComponent implements OnInit, AfterViewInit {
             if (y > 0) {
                 projectile.position.setY(y);
                 this.render();
-                requestAnimationFrame(() => this.animateProjectile(projectile, x + 2));
+                requestAnimationFrame(() => this.animateProjectile(projectile, x + 1));
             }
         }
     }
